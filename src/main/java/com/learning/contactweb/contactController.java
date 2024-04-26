@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class contactController {
-    private ContactRepository contactRepository;
+    final private ContactRepository contactRepository;
 
     @Autowired
     public contactController(ContactRepository contactRepository) {
@@ -28,25 +28,24 @@ public class contactController {
     @ResponseBody
     public ResponseEntity<String>
     addContact(@RequestBody Contact contact
-    )
-    {
+    ) {
         String firstName = contact.getFirstName();
         String lastName = contact.getLastName();
-        String number  = contact.getNumber();
+        String number = contact.getNumber();
 
 
-        if(number==null || lastName==null || firstName==null) {
-        return  ResponseEntity.badRequest().body("Invalid parameters");
+        if (number == null || lastName == null || firstName == null) {
+            return ResponseEntity.badRequest().body("Invalid parameters");
         }
         if (firstName.isEmpty() || lastName.isEmpty() || number.isEmpty()) {
             return ResponseEntity.badRequest().body("First name, last name, and number are required.");
         }
 
-        if(contactRepository.existsByFirstNameAndLastName(firstName, lastName)) {
+        if (contactRepository.existsByFirstNameAndLastName(firstName, lastName)) {
             return ResponseEntity.badRequest().body("Full Name, last name already exists.");
         }
 
-        if(contactRepository.existsByNumber(number)) {
+        if (contactRepository.existsByNumber(number)) {
             return ResponseEntity.badRequest().body("Contact number already exists.");
         }
 
@@ -63,8 +62,22 @@ public class contactController {
     @RequestMapping(value = "/contacts/{id}", method = RequestMethod.DELETE)
     @ResponseBody
     public String deleteContact(@PathVariable int id) {
-    contactRepository.deleteById(id);
-    return "Deleted contact with id " + id;
+        contactRepository.deleteById(id);
+        return "Deleted contact with id " + id;
+    }
+
+
+    @RequestMapping(value = "/contacts/{id}", method = RequestMethod.PUT)
+    @ResponseBody
+    public String updateContact(@PathVariable int id, @RequestBody Contact contact) {
+        Contact existingContact = contactRepository.findById(id).get();
+        if(contact.getFirstName() == null || contact.getLastName() == null || contact.getNumber() == null)
+            return "Invalid parameters";
+        existingContact.setFirstName(contact.getFirstName());
+        existingContact.setLastName(contact.getLastName());
+        existingContact.setNumber(contact.getNumber());
+        contactRepository.save(existingContact);
+        return "Contact updated successfully";
     }
 
 }
