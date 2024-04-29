@@ -1,11 +1,13 @@
 package com.learning.contactweb;
 
 
-import ch.qos.logback.core.model.Model;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 
 
 @Controller
@@ -19,34 +21,40 @@ public class contactController {
 
     @RequestMapping(value = "/contacts", method = RequestMethod.GET)
     @ResponseBody
-    public Iterable<Contact> contacts(Model model) {
+    public Iterable<Contact> getContacts() {
         return contactRepository.findAll();
     }
 
 
     @RequestMapping(value = "/contacts", method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity<String>
+    public ResponseEntity<HashMap<String, String>>
     addContact(@RequestBody Contact contact
     ) {
         String firstName = contact.getFirstName();
         String lastName = contact.getLastName();
         String number = contact.getNumber();
 
+        HashMap<String, String> object = new HashMap<>();
 
         if (number == null || lastName == null || firstName == null) {
-            return ResponseEntity.badRequest().body("Invalid parameters");
+            object.put("message", "Invalid data");
+            return ResponseEntity.badRequest().body(object);
         }
+
         if (firstName.isEmpty() || lastName.isEmpty() || number.isEmpty()) {
-            return ResponseEntity.badRequest().body("First name, last name, and number are required.");
+            object.put("message", "Please enter all the details");
+            return ResponseEntity.badRequest().body(object);
         }
 
         if (contactRepository.existsByFirstNameAndLastName(firstName, lastName)) {
-            return ResponseEntity.badRequest().body("Full Name, last name already exists.");
+            object.put("message", "firstName or lastName already exists");
+            return ResponseEntity.badRequest().body(object);
         }
 
         if (contactRepository.existsByNumber(number)) {
-            return ResponseEntity.badRequest().body("Contact number already exists.");
+            object.put("message", "number already exists");
+            return ResponseEntity.badRequest().body(object);
         }
 
         Contact newContact = new Contact();
@@ -55,29 +63,53 @@ public class contactController {
         newContact.setLastName(lastName);
         newContact.setNumber(number);
         contactRepository.save(newContact);
-        return ResponseEntity.ok().body("Contact added successfully.");
+        object.put("message", "Contact added successfully");
+        return ResponseEntity.ok().body(object);
     }
 
 
     @RequestMapping(value = "/contacts/{id}", method = RequestMethod.DELETE)
     @ResponseBody
-    public String deleteContact(@PathVariable int id) {
+    public ResponseEntity<HashMap<String,String>> deleteContact(@PathVariable int id) {
+        HashMap<String, String> object = new HashMap<>();
         contactRepository.deleteById(id);
-        return "Deleted contact with id " + id;
+        object.put("message", "Contact deleted successfully");
+        return ResponseEntity.ok().body(object);
     }
 
 
     @RequestMapping(value = "/contacts/{id}", method = RequestMethod.PUT)
     @ResponseBody
-    public String updateContact(@PathVariable int id, @RequestBody Contact contact) {
+    public ResponseEntity<HashMap<String, String>> updateContact(@PathVariable int id, @RequestBody Contact contact) {
+        HashMap<String, String> object = new HashMap<>();
         Contact existingContact = contactRepository.findById(id).get();
-        if(contact.getFirstName() == null || contact.getLastName() == null || contact.getNumber() == null)
-            return "Invalid parameters";
+        if (contact.getFirstName() == null || contact.getLastName() == null || contact.getNumber() == null) {
+            object.put("message", "Invalid data");
+            return ResponseEntity.badRequest().body(object);
+        }
         existingContact.setFirstName(contact.getFirstName());
         existingContact.setLastName(contact.getLastName());
         existingContact.setNumber(contact.getNumber());
         contactRepository.save(existingContact);
-        return "Contact updated successfully";
+
+        object.put("message", "Contact updated successfully");
+        return ResponseEntity.ok().body(object);
     }
 
+
+    @RequestMapping(value = "/search-contacts", method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<HashMap<String, ArrayList<Contact>>> findContact(@RequestParam String term) {
+        HashMap<String, ArrayList<Contact>> object = new HashMap<>();
+
+        object.put("contacts", new ArrayList<Contact>());
+        if(term == null || term.isEmpty()) {
+            return ResponseEntity.badRequest().body(object);
+        }
+
+        ArrayList<Contact> foundedContacts  = contactRepository.searchContacts(term);
+
+        object.put("contacts", foundedContacts);
+        return ResponseEntity.ok().body(object);
+    }
 }
