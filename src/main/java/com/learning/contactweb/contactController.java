@@ -29,11 +29,11 @@ public class contactController {
     @RequestMapping(value = "/contacts", method = RequestMethod.POST)
     @ResponseBody
     public ResponseEntity<HashMap<String, String>>
-    addContact(@RequestBody Contact contact
+    addContact(@RequestBody newContact contact
     ) {
-        String firstName = contact.getFirstName();
-        String lastName = contact.getLastName();
-        String number = contact.getNumber();
+        String firstName = contact.firstName;
+        String lastName = contact.lastName;
+        String number = contact.phone;
 
         HashMap<String, String> object = new HashMap<>();
 
@@ -70,7 +70,7 @@ public class contactController {
 
     @RequestMapping(value = "/contacts/{id}", method = RequestMethod.DELETE)
     @ResponseBody
-    public ResponseEntity<HashMap<String,String>> deleteContact(@PathVariable int id) {
+    public ResponseEntity<HashMap<String, String>> deleteContact(@PathVariable int id) {
         HashMap<String, String> object = new HashMap<>();
         contactRepository.deleteById(id);
         object.put("message", "Contact deleted successfully");
@@ -80,18 +80,20 @@ public class contactController {
 
     @RequestMapping(value = "/contacts/{id}", method = RequestMethod.PUT)
     @ResponseBody
-    public ResponseEntity<HashMap<String, String>> updateContact(@PathVariable int id, @RequestBody Contact contact) {
+    public ResponseEntity<HashMap<String, String>> updateContact(@PathVariable int id, @RequestBody newContact contact) {
         HashMap<String, String> object = new HashMap<>();
         Contact existingContact = contactRepository.findById(id).get();
-        if (contact.getFirstName() == null || contact.getLastName() == null || contact.getNumber() == null) {
+
+        if (contact.firstName != null) existingContact.setFirstName(contact.phone);
+        else if (contact.lastName != null) existingContact.setLastName(contact.phone);
+        else if (contact.phone != null) existingContact.setNumber(contact.phone);
+        else {
             object.put("message", "Invalid data");
             return ResponseEntity.badRequest().body(object);
         }
-        existingContact.setFirstName(contact.getFirstName());
-        existingContact.setLastName(contact.getLastName());
-        existingContact.setNumber(contact.getNumber());
-        contactRepository.save(existingContact);
 
+
+        contactRepository.save(existingContact);
         object.put("message", "Contact updated successfully");
         return ResponseEntity.ok().body(object);
     }
@@ -103,11 +105,11 @@ public class contactController {
         HashMap<String, ArrayList<Contact>> object = new HashMap<>();
 
         object.put("contacts", new ArrayList<Contact>());
-        if(term == null || term.isEmpty()) {
+        if (term == null || term.isEmpty()) {
             return ResponseEntity.badRequest().body(object);
         }
 
-        ArrayList<Contact> foundedContacts  = contactRepository.searchContacts(term);
+        ArrayList<Contact> foundedContacts = contactRepository.searchContacts(term);
 
         object.put("contacts", foundedContacts);
         return ResponseEntity.ok().body(object);
